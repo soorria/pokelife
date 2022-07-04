@@ -21,4 +21,7 @@ export default defineConfig({
       '~': join(__dirname, './src'),
     },
   },
+  worker: {
+    plugins: [comlink()],
+  },
 })
