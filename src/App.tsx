@@ -187,7 +187,10 @@ const App: Component = () => {
 
   return (
     <>
-      <div class="grid h-full place-items-center overflow-hidden">
+      <div
+        class="grid h-full place-items-center overflow-hidden"
+        classList={{ 'bg-base-100': !options.isEmbed }}
+      >
         <Show
           when={ready()}
           fallback={
