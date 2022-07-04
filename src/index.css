@@ -1,0 +1,22 @@
+@tailwind base;
+
+html, body, #root {
+  height: 100%;
+}
+
+@tailwind components;
+
+.btn:not(.no-ring),
+.link,
+.textarea-primary,
+.input-primary,
+.focus-outline {
+  @apply focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-primary;
+}
+
+.focus-within-outline {
+  @apply focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary;
+}
+
+@tailwind utilities;
+
