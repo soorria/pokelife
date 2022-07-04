@@ -20,14 +20,16 @@ export const debounce = <T extends CallableFunction>(
 
 export const dbg = <T>(t: T, ...args: any[]) => (console.log(t, ...args), t)
 
-export const rafLoopAsync = (fn: () => Promise<void>) => {
+export const rafLoopAsync = (fn: () => Promise<void>, delay?: number) => {
   let stopped = false
   let timeout: NodeJS.Timeout
   const loop = async () => {
     await fn()
     if (stopped) return
-    raf = requestAnimationFrame(loop)
+    if (delay) timeout = setTimeout(() => doRaf(), delay)
+    else doRaf()
   }
+  const doRaf = () => (raf = requestAnimationFrame(loop))
   let raf = requestAnimationFrame(loop)
   return () => {
     cancelAnimationFrame(raf)
@@ -55,3 +57,15 @@ export const cx = (...classes: (string | boolean | null | undefined)[]) =>
   classes.filter(cls => typeof cls === 'string').join(' ')
 
 export const toggle = (b: boolean) => !b
+
+export const range = (min: number, max: number, step = 1): number[] => {
+  const result = [] as number[]
+  let i = min
+  for (; i < max; i += step) {
+    result.push(i)
+  }
+  if (i !== max) {
+    result.push(max)
+  }
+  return result
+}

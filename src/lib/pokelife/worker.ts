@@ -1,6 +1,16 @@
 import { randomItem } from '~/utils/misc'
-import { effectivenessMap } from './constants'
+import { allTypes, effectivenessMap } from './constants'
 import { AttackEffectiveness, PokemonType, State } from './types'
+import { randomType } from './utils'
+
+let allowedTypes = [...allTypes]
+
+export const setAllowedTypes = (types: PokemonType[]) => (allowedTypes = types)
+
+export const randomState = (width: number, height: number) =>
+  Array.from({ length: height }, _ =>
+    Array.from({ length: width }, _ => randomType(allowedTypes))
+  )
 
 export const nextState = (state: State) => {
   const rows = state.length
@@ -46,5 +56,32 @@ export const nextState = (state: State) => {
     result.push(row)
   }
 
+  return result
+}
+
+type Row = State[number]
+
+const resizeRow = (row: Row, cols: number): Row => {
+  const result: Row = []
+  for (let i = 0; i < cols; ++i) {
+    result.push(row[i] ?? randomType(allowedTypes))
+  }
+  return result
+}
+
+export const resizeState = (
+  state: State,
+  rows: number,
+  cols: number
+): State => {
+  const result = []
+  for (let i = 0; i < rows; ++i) {
+    const maybeRow = state[i]
+    if (maybeRow) {
+      result.push(resizeRow(maybeRow, cols))
+    } else {
+      result.push(Array.from({ length: cols }, _ => randomType(allowedTypes)))
+    }
+  }
   return result
 }

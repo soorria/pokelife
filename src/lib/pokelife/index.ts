@@ -1,4 +1,3 @@
-export * from './automaton'
 export * from './constants'
 export * from './types'
 export * from './utils'

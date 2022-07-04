@@ -420,3 +420,28 @@ export const colorTheme = {
   [PokemonType.STEEL]: '#B8B8D0',
   [PokemonType.FAIRY]: '#EE99AC',
 } as const
+
+export const typeNameMap = {
+  [PokemonType.NORMAL]: 'normal',
+  [PokemonType.FIRE]: 'fire',
+  [PokemonType.WATER]: 'water',
+  [PokemonType.GRASS]: 'grass',
+  [PokemonType.ELECTRIC]: 'electric',
+  [PokemonType.ICE]: 'ice',
+  [PokemonType.FIGHTING]: 'fighting',
+  [PokemonType.POISON]: 'poison',
+  [PokemonType.GROUND]: 'ground',
+  [PokemonType.FLYING]: 'flying',
+  [PokemonType.PSYCHIC]: 'psychic',
+  [PokemonType.BUG]: 'bug',
+  [PokemonType.ROCK]: 'rock',
+  [PokemonType.GHOST]: 'ghost',
+  [PokemonType.DARK]: 'dark',
+  [PokemonType.DRAGON]: 'dragon',
+  [PokemonType.STEEL]: 'steel',
+  [PokemonType.FAIRY]: 'fairy',
+} as const
+
+export const typeNameMapReverse = Object.fromEntries(
+  Object.entries(typeNameMap).map(([t, n]) => [n, parseInt(t)])
+)
