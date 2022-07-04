@@ -10,17 +10,19 @@ export const randomType = (types: readonly PokemonType[] = allTypes) =>
 
 const DEBOUNCE_TIME = 500
 const _defaultCellSizeAccessor = () => 16
+const _defaultBufferAccessor = () => 0
 export const useCanvasSize = (
-  cellSize: Accessor<number> = _defaultCellSizeAccessor
+  cellSize: Accessor<number> = _defaultCellSizeAccessor,
+  buffer: Accessor<number> = () => 0
 ) => {
   const windowSize = useScreenSize()
 
   const rows = createDebouncedMemo(
-    () => Math.floor(windowSize.height / cellSize()),
+    () => Math.floor(windowSize.height / cellSize()) + buffer(),
     DEBOUNCE_TIME
   )
   const cols = createDebouncedMemo(
-    () => Math.floor(windowSize.width / cellSize()),
+    () => Math.floor(windowSize.width / cellSize()) + buffer(),
     DEBOUNCE_TIME
   )
   const height = () => rows() * cellSize()

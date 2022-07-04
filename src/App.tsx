@@ -107,7 +107,10 @@ const App: Component = () => {
   })
 
   const settingsDialog = useDialog({ id: 'settings' })
-  const canvasSize = useCanvasSize(() => options.size)
+  const canvasSize = useCanvasSize(
+    () => options.size,
+    () => (options.isEmbed ? 1 : 0)
+  )
 
   const canvas = (
     <canvas
