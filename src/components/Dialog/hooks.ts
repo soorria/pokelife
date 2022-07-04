@@ -1,5 +1,5 @@
 import * as dialog from '@zag-js/dialog'
-import { useMachine, useSetup } from '@zag-js/solid'
+import { normalizeProps, useMachine, useSetup } from '@zag-js/solid'
 import { createMemo } from 'solid-js'
 
 type UseDialogProps = Partial<dialog.Context> & {
@@ -17,7 +17,7 @@ export const useDialog = <
 }: UseDialogProps) => {
   const [state, send] = useMachine(dialog.machine(ctx))
   const triggerRef = useSetup<TTriggerElement>({ send, id })
-  const api = createMemo(() => dialog.connect(state, send))
+  const api = createMemo(() => dialog.connect(state, send, normalizeProps))
 
   return { triggerRef, api }
 }

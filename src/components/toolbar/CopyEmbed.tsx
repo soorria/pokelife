@@ -34,9 +34,10 @@ const CopyEmbed: Component<CopyEmbedProps> = () => {
   return (
     <>
       <ToolbarButton
-        class="hidden place-items-center sm:grid"
+        id="embed-code"
+        class="grid place-items-center"
         onClick={() => dialog.api().open()}
-        aria-label={'See Embed Code'}
+        label={'See Embed Code'}
         ref={dialog.triggerRef}
       >
         <CodeIcon class="col-span-full row-start-1 h-6 w-6 transition" />
