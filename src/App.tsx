@@ -39,6 +39,7 @@ import Dialog, {
 } from './components/Dialog'
 import RangeSlider from './components/RangeSlider'
 import ExternalLink from './components/ExternalLink'
+import CopyEmbed from './components/toolbar/CopyEmbed'
 
 const App: Component = () => {
   const getInitialOptionsFromSearchParams = () => {
@@ -94,7 +95,11 @@ const App: Component = () => {
 
   const [options, setOptions] = createStore(getInitialOptionsFromSearchParams())
 
-  createEffect(() => syncOptionsToUrl())
+  createEffect(() => {
+    if (ready()) {
+      syncOptionsToUrl()
+    }
+  })
 
   const settingsDialog = useDialog({ id: 'settings' })
   const infoDialog = useDialog({ id: 'info' })
@@ -115,14 +120,8 @@ const App: Component = () => {
   let state: State = []
 
   const init = async () => {
-    await Promise.all([
-      pokelifeWorker
-        .randomState(canvasSize.cols, canvasSize.rows)
-        .then(random => {
-          state = random
-        }),
-      pokelifeWorker.setAllowedTypes([...options.allowedTypes]),
-    ])
+    await pokelifeWorker.setAllowedTypes([...options.allowedTypes])
+    state = await pokelifeWorker.randomState(canvasSize.cols, canvasSize.rows)
     setReady(true)
   }
   init()
@@ -180,242 +179,258 @@ const App: Component = () => {
   })
 
   return (
-    <div class="grid h-full place-items-center overflow-hidden">
-      <Show
-        when={ready()}
-        fallback={
-          <div
-            class="radial-progress animate-spin text-primary"
-            style="--value:75"
-          />
-        }
-      >
-        {canvas}
-      </Show>
-      <Show when={!options.isEmbed}>
-        <div
-          class="fixed inset-x-0 bottom-0 flex space-x-4 bg-base-100/50 p-4 transition-opacity"
-          classList={{
-            'opacity-0 hocus-within:opacity-100': !options.toolbarVisible,
-          }}
+    <>
+      <div class="grid h-full place-items-center overflow-hidden">
+        <Show
+          when={ready()}
+          fallback={
+            <div
+              class="radial-progress animate-spin text-primary"
+              style="--value:75"
+            />
+          }
         >
-          <ToolbarButton
-            class="grid place-items-center"
-            onClick={() => {
-              const api = settingsDialog.api()
-              if (api.isOpen) {
-                api.close()
-              } else {
-                api.open()
-              }
+          {canvas}
+        </Show>
+        <Show when={!options.isEmbed}>
+          <div
+            class="fixed inset-x-0 bottom-0 flex space-x-4 bg-base-100/50 p-4 transition-opacity"
+            classList={{
+              'opacity-0 hocus-within:opacity-100': !options.toolbarVisible,
             }}
-            aria-label={
-              settingsDialog.api().isOpen ? 'Close Settings' : 'Open Settings'
-            }
-            ref={settingsDialog.triggerRef}
           >
-            <CogIcon
-              class="col-span-full row-start-1 h-6 w-6 transition"
-              classList={{
-                'rotate-[180deg] opacity-0': settingsDialog.api().isOpen,
+            <ToolbarButton
+              class="grid place-items-center"
+              onClick={() => {
+                const api = settingsDialog.api()
+                if (api.isOpen) {
+                  api.close()
+                } else {
+                  api.open()
+                }
               }}
-            />
-            <XIcon
-              class="col-span-full row-start-1 h-6 w-6 transition"
-              classList={{
-                'rotate-[-180deg] opacity-0': !settingsDialog.api().isOpen,
-              }}
-            />
-          </ToolbarButton>
-          <Dialog api={settingsDialog.api()}>
-            <DialogBox>
-              <DialogHeading>Settings</DialogHeading>
-              <DialogDescription>
-                <div class="form-control">
-                  <label class="label" for="cell-size">
-                    <span class="label-text">Cell Size</span>
-                    <span class="label-text-alt">{options.size}</span>
-                  </label>
-                  <RangeSlider
-                    class="range range-primary"
-                    min={1}
-                    max={32}
-                    step={1}
-                    value={options.size}
-                    onChange={value => {
-                      if (Number.isSafeInteger(value) && value > 0) {
-                        setOptions('size', value)
-                      }
-                    }}
-                  />
-                </div>
-                <div class="form-control">
-                  <label class="label" for="cell-size">
-                    <span class="label-text">Update Delay</span>
-                  </label>
-                  <input
-                    type="number"
-                    class="input input-primary"
-                    min={0}
-                    value={options.delay}
-                    onInput={event => {
-                      const value = event.currentTarget.valueAsNumber
-                      if (Number.isSafeInteger(value) && value > 0) {
-                        setOptions('delay', value)
-                      }
-                    }}
-                  />
-                </div>
-              </DialogDescription>
-              <DialogActions>
-                <DialogCloseAction>Close</DialogCloseAction>
-              </DialogActions>
-            </DialogBox>
-          </Dialog>
-          <ToolbarButton
-            class="grid place-items-center"
-            onClick={() => {
-              const api = infoDialog.api()
-              if (api.isOpen) {
-                api.close()
-              } else {
-                api.open()
+              aria-label={
+                settingsDialog.api().isOpen ? 'Close Settings' : 'Open Settings'
               }
-            }}
-            aria-label={'Randomise State'}
-            ref={infoDialog.triggerRef}
-          >
-            <InfoIcon
-              class="col-span-full row-start-1 h-6 w-6 transition"
-              classList={{
-                'rotate-[180deg] opacity-0': infoDialog.api().isOpen,
+              ref={settingsDialog.triggerRef}
+            >
+              <CogIcon
+                class="col-span-full row-start-1 h-6 w-6 transition"
+                classList={{
+                  'rotate-[180deg] opacity-0': settingsDialog.api().isOpen,
+                }}
+              />
+              <XIcon
+                class="col-span-full row-start-1 h-6 w-6 transition"
+                classList={{
+                  'rotate-[-180deg] opacity-0': !settingsDialog.api().isOpen,
+                }}
+              />
+            </ToolbarButton>
+            <Dialog api={settingsDialog.api()}>
+              <DialogBox>
+                <DialogHeading>Settings</DialogHeading>
+                <DialogDescription>
+                  <div class="form-control">
+                    <label class="label" for="cell-size">
+                      <span class="label-text">Cell Size</span>
+                      <span class="label-text-alt">{options.size}</span>
+                    </label>
+                    <RangeSlider
+                      class="range range-primary"
+                      min={1}
+                      max={32}
+                      step={1}
+                      value={options.size}
+                      onChange={value => {
+                        if (Number.isSafeInteger(value) && value > 0) {
+                          setOptions('size', value)
+                        }
+                      }}
+                    />
+                  </div>
+                  <div class="form-control">
+                    <label class="label" for="cell-size">
+                      <span class="label-text">Update Delay</span>
+                    </label>
+                    <input
+                      type="number"
+                      class="input input-primary"
+                      min={0}
+                      value={options.delay}
+                      onInput={event => {
+                        const value = event.currentTarget.valueAsNumber
+                        if (Number.isSafeInteger(value) && value > 0) {
+                          setOptions('delay', value)
+                        }
+                      }}
+                    />
+                  </div>
+                </DialogDescription>
+                <DialogActions>
+                  <DialogCloseAction>Close</DialogCloseAction>
+                </DialogActions>
+              </DialogBox>
+            </Dialog>
+            <ToolbarButton
+              class="grid place-items-center"
+              onClick={() => {
+                const api = infoDialog.api()
+                if (api.isOpen) {
+                  api.close()
+                } else {
+                  api.open()
+                }
               }}
-            />
-            <XIcon
-              class="col-span-full row-start-1 h-6 w-6 transition"
-              classList={{
-                'rotate-[-180deg] opacity-0': !infoDialog.api().isOpen,
-              }}
-            />
-          </ToolbarButton>
-          <Dialog api={infoDialog.api()}>
-            <DialogBox>
-              <DialogHeading>Info</DialogHeading>
-              <DialogDescription>
-                <div class="space-y-4">
-                  <p>
-                    This is kinda like{' '}
-                    <ExternalLink href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">
-                      Conway's Game of Life
-                    </ExternalLink>
-                    , but using Pokemon Types rather than boolean cell states.
-                    This is <span class="font-bold italic">heavily</span>{' '}
-                    inspired by{' '}
-                    <ExternalLink href="https://twitter.com/matthen2/status/1543226572592783362">
-                      this tweet
-                    </ExternalLink>{' '}
-                    by{' '}
-                    <ExternalLink href="https://twitter.com/matthen2">
-                      Matt Henderson
-                    </ExternalLink>
-                  </p>
-                  <p>
-                    Made by{' '}
-                    <ExternalLink href="https://soorria.com?ref=pokelife">
-                      Soorria
-                    </ExternalLink>{' '}
-                    and{' '}
-                    <ExternalLink href="https://github.com/soorria/pokelife">
-                      source here
-                    </ExternalLink>
-                    .
-                  </p>
-                  <div class="space-y-3">
-                    <h3 class="text-lg">Pokemon Types &amp; Colors</h3>
-                    <div class="grid grid-cols-2 gap-x-4 gap-y-6">
-                      <For each={allTypes}>
-                        {type => (
-                          <div class="space-y-2">
-                            <div
-                              class="rounded-btn relative h-16"
-                              style={{ 'background-color': colorTheme[type] }}
-                            >
-                              <p class="rounded-tr-box absolute bottom-0 left-0 bg-base-100 px-3 py-1">
-                                {typeNameMap[type]}
-                              </p>
+              aria-label={'Randomise State'}
+              ref={infoDialog.triggerRef}
+            >
+              <InfoIcon
+                class="col-span-full row-start-1 h-6 w-6 transition"
+                classList={{
+                  'rotate-[180deg] opacity-0': infoDialog.api().isOpen,
+                }}
+              />
+              <XIcon
+                class="col-span-full row-start-1 h-6 w-6 transition"
+                classList={{
+                  'rotate-[-180deg] opacity-0': !infoDialog.api().isOpen,
+                }}
+              />
+            </ToolbarButton>
+            <Dialog api={infoDialog.api()}>
+              <DialogBox>
+                <DialogHeading>Info</DialogHeading>
+                <DialogDescription>
+                  <div class="space-y-4">
+                    <p>
+                      This is kinda like{' '}
+                      <ExternalLink href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">
+                        Conway's Game of Life
+                      </ExternalLink>
+                      , but using Pokemon Types rather than boolean cell states.
+                      This is <span class="font-bold italic">heavily</span>{' '}
+                      inspired by{' '}
+                      <ExternalLink href="https://twitter.com/matthen2/status/1543226572592783362">
+                        this tweet
+                      </ExternalLink>{' '}
+                      by{' '}
+                      <ExternalLink href="https://twitter.com/matthen2">
+                        Matt Henderson
+                      </ExternalLink>
+                    </p>
+                    <p>
+                      Made by{' '}
+                      <ExternalLink href="https://soorria.com?ref=pokelife">
+                        Soorria
+                      </ExternalLink>{' '}
+                      and{' '}
+                      <ExternalLink href="https://github.com/soorria/pokelife">
+                        source here
+                      </ExternalLink>
+                      .
+                    </p>
+                    <div class="space-y-3">
+                      <h3 class="text-lg">Pokemon Types &amp; Colors</h3>
+                      <div class="grid grid-cols-2 gap-x-4 gap-y-6">
+                        <For each={allTypes}>
+                          {type => (
+                            <div class="space-y-2">
+                              <div
+                                class="rounded-btn relative h-16"
+                                style={{ 'background-color': colorTheme[type] }}
+                              >
+                                <p class="rounded-tr-box absolute bottom-0 left-0 bg-base-100 px-3 py-1">
+                                  {typeNameMap[type]}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </For>
+                          )}
+                        </For>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </DialogDescription>
-              <DialogActions>
-                <DialogCloseAction>Close</DialogCloseAction>
-              </DialogActions>
-            </DialogBox>
-          </Dialog>
-          <div class="flex-1" />
-          <ToolbarButton
-            class="grid place-items-center"
-            onClick={() => reset()}
-            aria-label={'Randomise State'}
-          >
-            <RefreshIcon class="col-span-full row-start-1 h-6 w-6 transition" />
-          </ToolbarButton>
-          <ToolbarButton
-            class="grid place-items-center"
-            disabled={options.running}
-            onClick={() => step(true)}
-            aria-label={'Next Step'}
-          >
-            <ChevronDoubleRightIcon class="col-span-full row-start-1 h-6 w-6 transition" />
-          </ToolbarButton>
-          <ToolbarButton
-            class="grid place-items-center"
-            onClick={() => setOptions('running', toggle)}
-            aria-label={options.running ? 'Pause Automaton' : 'Play Automaton'}
-          >
-            <PlayIcon
-              class="col-span-full row-start-1 h-6 w-6 transition"
-              classList={{
-                'opacity-0': options.running,
-              }}
-            />
-            <PauseIcon
-              class="col-span-full row-start-1 h-6 w-6 transition"
-              classList={{
-                'opacity-0': !options.running,
-              }}
-            />
-          </ToolbarButton>
-          <ToolbarButton
-            class="grid place-items-center"
-            onClick={() => {
-              if (options.toolbarVisible) {
-                canvas.focus({ preventScroll: true })
+                </DialogDescription>
+                <DialogActions>
+                  <DialogCloseAction>Close</DialogCloseAction>
+                </DialogActions>
+              </DialogBox>
+            </Dialog>
+            <CopyEmbed />
+            <div class="flex-1" />
+            <ToolbarButton
+              class="grid place-items-center"
+              onClick={() => reset()}
+              aria-label={'Randomise State'}
+            >
+              <RefreshIcon class="col-span-full row-start-1 h-6 w-6 transition" />
+            </ToolbarButton>
+            <ToolbarButton
+              class="grid place-items-center"
+              disabled={options.running}
+              onClick={() => step(true)}
+              aria-label={'Next Step'}
+            >
+              <ChevronDoubleRightIcon class="col-span-full row-start-1 h-6 w-6 transition" />
+            </ToolbarButton>
+            <ToolbarButton
+              class="grid place-items-center"
+              onClick={() => setOptions('running', toggle)}
+              aria-label={
+                options.running ? 'Pause Automaton' : 'Play Automaton'
               }
-              setOptions('toolbarVisible', toggle)
-            }}
-            aria-label={options.running ? 'Hide Toolbar' : 'Show Toolbar'}
-          >
-            <EyeIcon
-              class="col-span-full row-start-1 h-6 w-6 transition"
-              classList={{
-                'opacity-0': options.toolbarVisible,
+            >
+              <PlayIcon
+                class="col-span-full row-start-1 h-6 w-6 transition"
+                classList={{
+                  'opacity-0': options.running,
+                }}
+              />
+              <PauseIcon
+                class="col-span-full row-start-1 h-6 w-6 transition"
+                classList={{
+                  'opacity-0': !options.running,
+                }}
+              />
+            </ToolbarButton>
+            <ToolbarButton
+              class="grid place-items-center"
+              onClick={() => {
+                if (options.toolbarVisible) {
+                  canvas.focus({ preventScroll: true })
+                }
+                setOptions('toolbarVisible', toggle)
               }}
-            />
-            <EyeOffIcon
-              class="col-span-full row-start-1 h-6 w-6 transition"
-              classList={{
-                'opacity-0': !options.toolbarVisible,
-              }}
-            />
-          </ToolbarButton>
-        </div>
+              aria-label={options.running ? 'Hide Toolbar' : 'Show Toolbar'}
+            >
+              <EyeIcon
+                class="col-span-full row-start-1 h-6 w-6 transition"
+                classList={{
+                  'opacity-0': options.toolbarVisible,
+                }}
+              />
+              <EyeOffIcon
+                class="col-span-full row-start-1 h-6 w-6 transition"
+                classList={{
+                  'opacity-0': !options.toolbarVisible,
+                }}
+              />
+            </ToolbarButton>
+          </div>
+        </Show>
+      </div>
+      <Show when={options.isEmbed}>
+        <a
+          href={(() => {
+            const url = new URL(location.href)
+            url.searchParams.delete('embed')
+            return url.toString()
+          })()}
+          target="_blank"
+          class="fixed inset-0 opacity-0"
+        ></a>
       </Show>
-    </div>
+    </>
   )
 }
 
