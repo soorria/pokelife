@@ -87,12 +87,13 @@ const App: Component = () => {
   }
 
   const syncOptionsToUrl = () => {
-    const { size, delay, allowedTypes: _types } = options
+    const { size, delay, allowedTypes: _types, isEmbed } = options
     const params = new URLSearchParams({
       size: size.toString(),
       delay: delay.toString(),
       types: _types.map(t => typeNameMap[t]).join(','),
     })
+    if (isEmbed) params.set('embed', 'true')
     history.replaceState('', '', `?${params}`)
   }
 
