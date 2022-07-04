@@ -105,7 +105,7 @@ const App: Component = () => {
     }
   })
 
-  const settingsDialog = useDialog({ id: 'settings', open: true })
+  const settingsDialog = useDialog({ id: 'settings' })
   const canvasSize = useCanvasSize(() => options.size)
 
   const canvas = (
