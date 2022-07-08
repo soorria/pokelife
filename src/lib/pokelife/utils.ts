@@ -13,7 +13,7 @@ const _defaultCellSizeAccessor = () => 16
 const _defaultBufferAccessor = () => 0
 export const useCanvasSize = (
   cellSize: Accessor<number> = _defaultCellSizeAccessor,
-  buffer: Accessor<number> = () => 0
+  buffer: Accessor<number> = _defaultBufferAccessor
 ) => {
   const windowSize = useScreenSize()
 

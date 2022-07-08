@@ -1,10 +1,12 @@
 import {
+  Accessor,
   Component,
   createEffect,
   createMemo,
   createSignal,
   For,
   onCleanup,
+  onMount,
   Show,
 } from 'solid-js'
 import { createStore } from 'solid-js/store'
@@ -42,69 +44,13 @@ import CopyEmbed from './components/toolbar/CopyEmbed'
 import Info from './components/toolbar/Info'
 
 const toolbarChildCommon = 'p-4 bg-base-100/50 sm:bg-transparent'
-const toolbarClass = 'sm:bg-base-100/50'
+const toolbarClass = 'sm:bg-base-100/50 inset-x-0'
 
 const App: Component = () => {
-  const getInitialOptionsFromSearchParams = () => {
-    const params = new URL(location.href).searchParams
-    const result = {
-      running: true,
-      toolbarVisible: true,
-      size: 16,
-      isEmbed: false,
-      delay: 100,
-      allowedTypes: [...allTypes],
-    }
+  const [ready, setReady] = createSignal(false)
+  const [options, setOptions] = useOptions(ready)
 
-    if (params.has('embed') && params.get('embed') !== 'false') {
-      result.isEmbed = true
-    }
-
-    if (params.has('size')) {
-      const maybeNumber = parseInt(params.get('size') ?? '')
-      if (Number.isSafeInteger(maybeNumber)) {
-        result.size = maybeNumber
-      }
-    }
-
-    if (params.has('delay')) {
-      const maybeNumber = parseInt(params.get('delay') ?? '')
-      if (Number.isSafeInteger(maybeNumber)) {
-        result.delay = maybeNumber
-      }
-    }
-
-    const maybeAllowedTypes = params
-      .getAll('types')
-      .flatMap(typesStr => typesStr.split(','))
-      .map(maybeTypeName => typeNameMapReverse[maybeTypeName])
-      .filter(Boolean) as PokemonType[]
-    if (maybeAllowedTypes.length) {
-      result.allowedTypes = maybeAllowedTypes
-    }
-
-    return result
-  }
-
-  const syncOptionsToUrl = () => {
-    const { size, delay, allowedTypes: _types, isEmbed } = options
-    const params = new URLSearchParams({
-      size: size.toString(),
-      delay: delay.toString(),
-      types: _types.map(t => typeNameMap[t]).join(','),
-    })
-    if (isEmbed) params.set('embed', 'true')
-    history.replaceState('', '', `?${params}`)
-  }
-
-  const [options, setOptions] = createStore(getInitialOptionsFromSearchParams())
   const selectedTypes = createMemo(() => new Set(options.allowedTypes))
-
-  createEffect(() => {
-    if (ready()) {
-      syncOptionsToUrl()
-    }
-  })
 
   const settingsDialog = useDialog({ id: 'settings' })
   const canvasSize = useCanvasSize(
@@ -123,7 +69,75 @@ const App: Component = () => {
 
   const ctx = canvas.getContext('2d', { alpha: true })!
 
-  const [ready, setReady] = createSignal(false)
+  const [hoveredTypeTooltip, setHoveredTypeTooltip] = createStore({
+    type: null as string | null,
+    row: -1,
+    col: -1,
+    show: false,
+    left: undefined as number | undefined,
+    top: undefined as number | undefined,
+  })
+  let typeTooltipTimeout: NodeJS.Timeout
+  let typeTooltipEl: HTMLDivElement | undefined
+  let toolbarEl: HTMLDivElement | undefined
+
+  const handler = (event: MouseEvent) => {
+    if (!typeTooltipEl) return
+    clearTimeout(typeTooltipTimeout)
+    const canvasRect = canvas.getBoundingClientRect()
+
+    const col = Math.floor((event.clientX - canvasRect.left) / options.size)
+    const row = Math.floor((event.clientY - canvasRect.top) / options.size)
+
+    const hoveredType = state[row]?.[col]
+
+    if (hoveredType === undefined) {
+      setHoveredTypeTooltip({ type: null, show: false })
+      return
+    }
+
+    const tooltipRect = typeTooltipEl.getBoundingClientRect()
+    let top = 16
+
+    const positionAbove = event.clientY - tooltipRect.height - 8
+    const positionBelow = event.clientY + 8
+
+    if (positionAbove >= 0) {
+      top = positionAbove
+    } else if (positionBelow + event.clientY < window.innerHeight) {
+      top = positionBelow
+    }
+
+    const left = Math.min(
+      Math.max(16, event.clientX - tooltipRect.width / 2),
+      window.innerWidth
+    )
+
+    const toolbarRect = toolbarEl?.getBoundingClientRect()
+
+    const isOverToolbar =
+      toolbarRect &&
+      event.clientX > toolbarRect.left &&
+      event.clientX < toolbarRect.right &&
+      event.clientY > toolbarRect.top &&
+      event.clientY < toolbarRect.bottom
+
+    setHoveredTypeTooltip({
+      row,
+      col,
+      show: !isOverToolbar,
+      left,
+      top,
+    })
+
+    typeTooltipTimeout = setTimeout(() => {
+      setHoveredTypeTooltip('show', false)
+    }, 3000)
+  }
+
+  onMount(() => window.addEventListener('mousemove', handler))
+  onCleanup(() => window.removeEventListener('mousemove', handler))
+
   let state: State = []
 
   const init = async () => {
@@ -161,6 +175,11 @@ const App: Component = () => {
   const render = () => {
     const size = options.size
     const start = Date.now()
+    const hoveredType = state[hoveredTypeTooltip.row]?.[hoveredTypeTooltip.col]
+    setHoveredTypeTooltip(
+      'type',
+      hoveredType === undefined ? null : typeNameMap[hoveredType]
+    )
     state.forEach((row, i) => {
       row.forEach((cell, j) => {
         ctx.fillStyle = colorTheme[cell]
@@ -208,11 +227,27 @@ const App: Component = () => {
         </Show>
         <Show when={!options.isEmbed}>
           <div
+            ref={typeTooltipEl}
+            class="fixed hidden w-24 rounded bg-base-100/75 py-2 px-4 text-center opacity-0 shadow-sm transition sm:block"
+            classList={{
+              'opacity-100':
+                hoveredTypeTooltip.show && hoveredTypeTooltip.type !== null,
+            }}
+            style={{
+              left: hoveredTypeTooltip.left + 'px',
+              top: hoveredTypeTooltip.top + 'px',
+            }}
+          >
+            {hoveredTypeTooltip.type}
+          </div>
+          <div
+            ref={toolbarEl}
             class={cx(
-              'fixed inset-x-0 bottom-0 flex items-end justify-between space-x-4 transition-opacity'
+              'fixed bottom-0 flex items-end justify-between space-x-4 transition-opacity'
             )}
             classList={{
-              'opacity-0 hocus-within:opacity-100': !options.toolbarVisible,
+              'opacity-0 hocus-within:opacity-100 right-0':
+                !options.toolbarVisible,
               [toolbarClass]: options.toolbarVisible,
             }}
           >
@@ -456,3 +491,71 @@ const App: Component = () => {
 }
 
 export default App
+
+const useOptions = (ready: Accessor<boolean>) => {
+  const getInitialOptionsFromSearchParams = () => {
+    const params = new URL(location.href).searchParams
+    const result = {
+      running: true,
+      toolbarVisible: true,
+      size: 16,
+      isEmbed: false,
+      delay: 100,
+      allowedTypes: [...allTypes],
+    }
+
+    if (params.has('embed') && params.get('embed') !== 'false') {
+      result.isEmbed = true
+    }
+
+    if (params.has('size')) {
+      const maybeNumber = parseInt(params.get('size') ?? '')
+      if (Number.isSafeInteger(maybeNumber)) {
+        result.size = maybeNumber
+      }
+    }
+
+    if (params.has('delay')) {
+      const maybeNumber = parseInt(params.get('delay') ?? '')
+      if (Number.isSafeInteger(maybeNumber)) {
+        result.delay = maybeNumber
+      }
+    }
+
+    const maybeAllowedTypes = params
+      .getAll('types')
+      .flatMap(typesStr => typesStr.split(','))
+      .map(maybeTypeName => typeNameMapReverse[maybeTypeName])
+      .filter(t => t !== undefined) as PokemonType[]
+    if (maybeAllowedTypes.length) {
+      result.allowedTypes = maybeAllowedTypes
+    }
+
+    return result
+  }
+
+  const syncOptionsToUrl = () => {
+    const { size, delay, allowedTypes: _types, isEmbed } = options
+    const params = new URLSearchParams({
+      size: size.toString(),
+      delay: delay.toString(),
+      types: _types.map(t => typeNameMap[t]).join(','),
+    })
+    if (isEmbed) params.set('embed', 'true')
+    history.replaceState('', '', `?${params}`)
+  }
+
+  const [options, setOptions] = createStore(getInitialOptionsFromSearchParams())
+
+  createEffect(() => {
+    console.log(options.allowedTypes.map(t => typeNameMap[t]))
+  })
+
+  createEffect(() => {
+    if (ready()) {
+      syncOptionsToUrl()
+    }
+  })
+
+  return [options, setOptions] as const
+}

@@ -12,6 +12,8 @@ export const randomState = (width: number, height: number) =>
     Array.from({ length: width }, _ => randomType(allowedTypes))
   )
 
+const TARGET_FOR_KILL = AttackEffectiveness.NORMAL * 2
+
 export const nextState = (state: State) => {
   const rows = state.length
   const cols = state[0]!.length
@@ -44,7 +46,7 @@ export const nextState = (state: State) => {
         }
       }
 
-      if (max_c > AttackEffectiveness.NORMAL * 2) {
+      if (max_c >= TARGET_FOR_KILL) {
         const typesAtMax = Array.from(counts)
           .filter(([_, c]) => c === max_c)
           .map(([t]) => t)
