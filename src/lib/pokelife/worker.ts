@@ -46,7 +46,7 @@ export const nextState = (state: State) => {
         }
       }
 
-      if (max_c >= TARGET_FOR_KILL) {
+      if (max_c > TARGET_FOR_KILL) {
         const typesAtMax = Array.from(counts)
           .filter(([_, c]) => c === max_c)
           .map(([t]) => t)
