@@ -548,10 +548,6 @@ const useOptions = (ready: Accessor<boolean>) => {
   const [options, setOptions] = createStore(getInitialOptionsFromSearchParams())
 
   createEffect(() => {
-    console.log(options.allowedTypes.map(t => typeNameMap[t]))
-  })
-
-  createEffect(() => {
     if (ready()) {
       syncOptionsToUrl()
     }
