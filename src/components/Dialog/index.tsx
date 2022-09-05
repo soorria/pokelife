@@ -63,7 +63,7 @@ export const DialogBox: ParentComponent<ComponentProps<'div'>> = props => {
   const api = useDialogContext()
   return (
     <div
-      class="rounded-t-box relative flex max-h-[90vh] w-full max-w-md flex-col space-y-6 bg-base-100 p-6 shadow-lg sm:rounded-b-box sm:px-8"
+      class="max-h-dialog-box rounded-t-box relative flex w-full max-w-md flex-col space-y-6 bg-base-100 p-6 shadow-lg sm:rounded-b-box sm:px-8"
       {...api.contentProps}
       {...props}
     />
